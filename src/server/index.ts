@@ -47,7 +47,15 @@ async function main() {
     )
   })
 
-  app.use(morgan('common'))
+  morgan.token('headers', function _get(req: any) {
+    return JSON.stringify(req.headers)
+  })
+
+  app.use(
+    morgan(
+      ':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] - :headers'
+    )
+  )
 
   app.use('/static', express.static(path.resolve(process.cwd(), 'static')))
 
