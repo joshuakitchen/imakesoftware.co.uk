@@ -10,8 +10,8 @@ medium to "talk to the rubber duck" whilst I'm developing.
 
 So, how does it work. Well first, I knew the content had to be written in something extremely simple, I could make
 each post in some HTML wizardry allowing me to render some cool content, but if i've learnt something in my years of
-being a Software Developer, it's that the simplest solutions are often the best, so posts are written in the everloved
-Markdown with React doing the heavy lifting on rendering.
+being a Software Developer, it's that the simplest solutions are often the best, so posts are written in the eternally
+loved Markdown, with React doing the heavy lifting on rendering.
 
 This leads to another problem, database. I have data to be stored and it has to be put somewhere, again, it comes down
 to the age-old solution of KISS (*Keep. It. Simple. Stupid.*). Each post is stored in a JSON file, with a reference to
