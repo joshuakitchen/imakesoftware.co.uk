@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useState } from 'react'
+import React, { FC, SetStateAction, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Routes, Route, useParams } from 'react-router'
 import { BrowserRouter, Link } from 'react-router-dom'
@@ -7,9 +7,34 @@ import axios, { AxiosResponse } from 'axios'
 
 const root = createRoot(document.getElementById('react-container'))
 
-const PostPage: FC<{}> = function (props) {
-  const [state, setState] = useState({ content: '' })
+const useLocalStorage = function useLocalStorage<S>(
+  key: string,
+  initial_state: S
+): [S, React.Dispatch<SetStateAction<S>>] {
+  if (localStorage.getItem(key)) {
+    initial_state = JSON.parse(localStorage.getItem(key))
+  }
+  const [state, setState] = useState(initial_state)
+  return [
+    state,
+    function setLocalStorage(arg: S | ((prevState: S) => S)) {
+      if (typeof arg === 'function') {
+        setState((prevState) => {
+          const newState = (arg as Function)(prevState)
+          localStorage.setItem(key, JSON.stringify(newState))
+          return newState
+        })
+      } else {
+        localStorage.setItem(key, JSON.stringify(arg))
+        setState.apply(this, arguments)
+      }
+    },
+  ]
+}
+
+const PostPage: FC<{}> = function () {
   const { post_id } = useParams()
+  const [state, setState] = useLocalStorage(`post-${post_id}`, { content: '' })
 
   useEffect(function _PostPageEffect() {
     axios.get(`/api/posts/${post_id}/`).then((res) => {
@@ -25,7 +50,7 @@ const PostPage: FC<{}> = function (props) {
 }
 
 const PostListPage: FC<{}> = function (props) {
-  const [state, setState] = useState({ data: [] })
+  const [state, setState] = useLocalStorage('posts', { data: [] })
 
   useEffect(function _PostListPageEffect() {
     axios.get('/api/posts/').then((res) => {
