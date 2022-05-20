@@ -36,8 +36,8 @@ async function main() {
   })
 
   morgan.token('remote-addr', function _remote(req: any) {
-    if (req.headers['cf-connecting-ip']) {
-      return req.headers['cf-connecting-ip']
+    if (req.headers['do-connecting-ip']) {
+      return req.headers['do-connecting-ip']
     }
     return (
       req.ip ||
@@ -47,15 +47,7 @@ async function main() {
     )
   })
 
-  morgan.token('headers', function _get(req: any) {
-    return JSON.stringify(req.headers)
-  })
-
-  app.use(
-    morgan(
-      ':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] - :headers'
-    )
-  )
+  app.use(morgan('common'))
 
   app.use('/static', express.static(path.resolve(process.cwd(), 'static')))
 
