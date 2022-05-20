@@ -20,10 +20,12 @@ async function main() {
       'utf-8'
     )
   )
-  manifest.entries = manifest.entries.map((entry: any, idx: number) => ({
-    ...entry,
-    id: `${idx + 1}`,
-  }))
+  manifest.entries = manifest.entries
+    .filter((item: any) => !item.hidden)
+    .sort(
+      (a: any, b: any) =>
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+    )
   setupLogging()
 
   const app = express()
@@ -31,6 +33,18 @@ async function main() {
   nunjucks.configure('templates', {
     autoescape: true,
     express: app,
+  })
+
+  morgan.token('remote-addr', function _remote(req: any) {
+    if (req.headers['cf-connecting-ip']) {
+      return req.headers['cf-connecting-ip']
+    }
+    return (
+      req.ip ||
+      req._remoteAddress ||
+      (req.connection && req.connection.remoteAddress) ||
+      undefined
+    )
   })
 
   app.use(morgan('common'))
@@ -51,13 +65,17 @@ async function main() {
         path.resolve(
           process.cwd(),
           'posts',
-          manifest.entries[post_id - 1].content
+          manifest.entries.filter(
+            (item: any) => parseInt(item.id) === post_id
+          )[0].content
         ),
         'utf-8'
       )
       res.json({
         id: post_id,
-        title: manifest.entries[post_id - 1].title,
+        title: manifest.entries.filter(
+          (item: any) => parseInt(item.id) === post_id
+        ).title,
         content: content,
       })
     } catch (err) {
