@@ -22,6 +22,5 @@ COPY --from=build /usr/src/app/out .
 
 COPY --from=build /usr/src/app/static ./static
 COPY --from=build /usr/src/app/templates ./templates
-COPY --from=build /usr/src/app/posts ./posts
 
 CMD ["npm", "start"]
