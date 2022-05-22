@@ -1,10 +1,15 @@
+import bcrypt from 'bcrypt'
+import bodyParser from 'body-parser'
+import cookieParser from 'cookie-parser'
+import dotenv from 'dotenv'
 import express from 'express'
 import morgan from 'morgan'
 import { AddressInfo, Server } from 'net'
 import path from 'path'
 import winston from 'winston'
 import nunjucks from 'nunjucks'
-import fs from 'fs/promises'
+import { setupDatabase, useDatabase } from './database'
+import ObjectID from 'bson-objectid'
 
 function setupLogging() {
   winston.configure({
@@ -14,19 +19,13 @@ function setupLogging() {
 }
 
 async function main() {
-  const manifest = JSON.parse(
-    await fs.readFile(
-      path.resolve(process.cwd(), 'posts', 'manifest.json'),
-      'utf-8'
-    )
-  )
-  manifest.entries = manifest.entries
-    .filter((item: any) => !item.hidden)
-    .sort(
-      (a: any, b: any) =>
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-    )
+  dotenv.config()
   setupLogging()
+
+  const database = useDatabase()
+  await database.connect()
+  await setupDatabase()
+  winston.info('application has connected to postgres')
 
   const app = express()
 
@@ -48,53 +47,140 @@ async function main() {
   })
 
   app.use(morgan('common'))
+  app.use(cookieParser(process.env.SECRET_KEY))
 
   app.use('/static', express.static(path.resolve(process.cwd(), 'static')))
 
   app.get('/api/posts/:post_id/', async function (req, res, next) {
     try {
-      const post_id = parseInt(req.params.post_id)
-      if (post_id <= 0 || post_id > manifest.entries.length) {
-        res.status(404).json({
+      const db = useDatabase()
+      const { rows, rowCount } = await db.query<{
+        id: string
+        title: string
+        content: string
+      }>('SELECT id, title, content FROM posts WHERE id = $1::text', [
+        req.params.post_id,
+      ])
+
+      if (rowCount === 0) {
+        return res.status(404).json({
           name: 'not_found',
-          message: 'The resource you are looking for could not be found.',
+          message: 'The content you are looking for could not be found.',
         })
-        return
       }
-      const content = await fs.readFile(
-        path.resolve(
-          process.cwd(),
-          'posts',
-          manifest.entries.filter(
-            (item: any) => parseInt(item.id) === post_id
-          )[0].content
-        ),
-        'utf-8'
-      )
+      const [data] = rows
       res.json({
-        id: post_id,
-        title: manifest.entries.filter(
-          (item: any) => parseInt(item.id) === post_id
-        ).title,
-        content: content,
+        id: data.id,
+        title: data.title,
+        content: data.content,
       })
     } catch (err) {
       next(err)
     }
   })
 
-  app.get('/api/posts/', function (req, res) {
-    res.json({
-      data: manifest.entries.map((item: any) => ({
-        id: item.id,
-        title: item.title,
-      })),
-    })
+  app.post('/api/posts/', bodyParser.json(), async function (req, res, next) {
+    try {
+      const { session } = req.signedCookies
+      if (!session) {
+        res.status(403).json({
+          name: 'forbidden',
+          message: 'You do not have permission to access that resource.',
+        })
+        return
+      }
+      const db = useDatabase()
+      const id = ObjectID().toHexString()
+      await db.query(
+        'INSERT INTO posts (id, title, content, in_progress) VALUES ($1, $2, $3, false)',
+        [id, req.body.title, req.body.content]
+      )
+      res.json({
+        id: id,
+        title: req.body.title,
+        content: req.body.content,
+      })
+    } catch (err) {
+      next(err)
+    }
   })
+
+  app.patch(
+    '/api/posts/:post_id',
+    bodyParser.json(),
+    async function (req, res, next) {
+      const { session } = req.signedCookies
+      if (!session) {
+        res.status(403).json({
+          name: 'forbidden',
+          message: 'You do not have permission to access that resource.',
+        })
+        return
+      }
+      const { post_id: id } = req.params
+      const db = useDatabase()
+      await db.query('UPDATE posts SET title=$2, content=$3 WHERE id = $1', [
+        id,
+        req.body.title,
+        req.body.content,
+      ])
+      res.json({
+        id: id,
+        title: req.body.title,
+        content: req.body.content,
+      })
+    }
+  )
+
+  app.get('/api/posts/', async function (req, res, next) {
+    try {
+      const db = useDatabase()
+      const data = await db.query<{ id: string; title: string }>(
+        'SELECT id, title, date_created FROM posts ORDER BY date_created DESC'
+      )
+      res.json({
+        data: data.rows,
+      })
+    } catch (err) {
+      next(err)
+    }
+  })
+
+  app.post(
+    '/login',
+    bodyParser.json(),
+    async function _onLogin(req, res, next) {
+      try {
+        const password = await bcrypt.compare(
+          req.body.password,
+          process.env.PASSWORD
+        )
+        if (req.body.email === process.env.EMAIL && password) {
+          winston.info(`${req.body.email} has signed in successfully`)
+          res.cookie('session', JSON.stringify({ email: req.body.email }), {
+            signed: true,
+            secure: true,
+          })
+          res.status(200).json({ success: true })
+        } else {
+          winston.warn(`${req.body.email} attempted to sign in`)
+          res.status(401).json({
+            name: 'invalid_credentials',
+            message: 'The username or password is incorrect.',
+          })
+        }
+      } catch (err) {
+        next(err)
+      }
+    }
+  )
 
   app.get('/*', function _getIndex(req, res) {
     res.render('index.html', {
       dev: process.env.NODE_ENV === 'dev',
+      user: req.signedCookies.session
+        ? Buffer.from(req.signedCookies.session).toString('base64')
+        : null,
     })
   })
 
@@ -106,5 +192,6 @@ async function main() {
 }
 
 main().catch(function _onStartupError(err: Error) {
+  winston.error(`error on starting the application: ${err.message}`)
   throw err
 })

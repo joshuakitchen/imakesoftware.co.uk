@@ -1,0 +1,7 @@
+export { default as AboutPage } from './AboutPage'
+export { default as EditPage } from './EditPage'
+export { default as HomePage } from './HomePage'
+export { default as LoginPage } from './LoginPage'
+export { default as NotFoundPage } from './NotFoundPage'
+export { default as PostListPage } from './PostListPage'
+export { default as PostPage } from './PostPage'

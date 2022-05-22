@@ -35,6 +35,9 @@ module.exports = (env, argv) => ({
   output: {
     path: path.resolve(DST_PATH, 'js'),
   },
+  resolve: {
+    extensions: ['.ts', '.tsx', '.js', '.jsx'],
+  },
   plugins:
     argv.mode === 'production'
       ? [new MiniCssExtractPlugin({ filename: '../css/[name].css' })]

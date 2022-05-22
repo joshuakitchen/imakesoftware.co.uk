@@ -10,6 +10,35 @@ html, body {
     font-family: 'Roboto Slab', Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
 }
 
+body.night {
+    color: rgb(153, 153, 153);
+    background-color: rgba(20, 20, 20);
+
+    input, input[type=text] {
+        color: inherit;
+        background: none;
+        
+        border-bottom: 1px solid rgb(40, 40, 40);
+    }
+
+    textarea {
+        color: inherit;
+        background: none;
+
+        border: 1px solid rgb(40, 40, 40);
+    }
+
+    button {
+        color: rgb(153, 153, 153);
+
+        background-color: rgb(40, 40, 40);
+
+        &:hover {
+            background-color: lighten(rgb(40, 40, 40), 5%);
+        }
+    }
+}
+
 a {
     color: #787878;
 
@@ -64,15 +93,133 @@ p {
 
     list-style: none;
 
+    &.right {
+        justify-content: flex-end;
+    }
+
+    ul {
+        margin: 0 -1rem 0 -1rem;
+
+        list-style: none;
+    }
+
     &>li {
         padding: 0 0rem;
 
         &>a {
             padding: 1rem 1rem;
         }
+
+        &.right {
+            flex: 1 1;
+        }
     }
 }
 
 .content {
     margin-top: 2rem;
+}
+
+input, input[type=text] {
+    padding: 0.5rem 4px;
+
+    font-size: 16px;
+
+    border: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.6);
+    outline: none;
+
+    width: 100%;
+
+    margin-bottom: 1rem;
+}
+
+button {
+    padding: 0.5rem;
+
+    font-weight: 700;
+
+    background-color:rgb(230, 230, 230);
+
+    border: 1px solid rgba(0, 0, 0, 0.6);
+    border-radius: 2px;
+
+    &:hover {
+        background-color: rgb(240, 240, 240);
+
+        cursor: pointer;
+    }
+
+    &:active {
+        background-color: rgb(220, 220, 220);
+    }
+}
+
+textarea {
+}
+
+.edit-window {
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    margin: 1rem;
+    padding: 0.5rem 1rem;
+    
+    border: 1px solid rgba(0, 0, 0, 0.4);
+    border-radius: 2px;
+
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+
+    display: none;
+
+    @media (min-width: 1280px) {
+        display: flex;
+        flex-direction: column;
+
+        width: 350px;
+        height: calc(100vh - 2rem);
+    }
+
+    &>textarea {
+        width: 100%;
+
+        flex: 1 1;
+        font-family: 'Consolas', monospace;
+        
+        outline: none;
+        border: 1px solid rgba(0, 0, 0, 0.6);
+
+        padding: 5px;
+
+        border-radius: 2px;
+    }
+
+    &>* {
+        margin: 0.5rem 0;
+    }
+}
+
+.edit {
+    position: absolute;
+
+    top: calc(100vh - 1rem);
+    left: calc(100vw - 1rem);
+
+    padding: 1rem;
+
+    transform: translate(-100%, -100%);
+    
+    background-color: rgb(31, 123, 209);
+
+    border-radius: 100%;
+
+    color: white;
+
+    &:hover {
+        background-color: lighten(rgb(31,123, 209), 5%);
+
+        color: white;
+    }
 }
